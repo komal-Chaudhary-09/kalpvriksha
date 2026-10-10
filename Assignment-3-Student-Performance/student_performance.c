@@ -8,10 +8,10 @@
 #define MAX_STUDENTS 100
 #define NAME_LENGTH 50
 #define SUBJECT_COUNT 3
+#define MIN_ROLL 1
+#define MAX_ROLL 100
 #define MIN_MARKS 0
 #define MAX_MARKS 100
-#define MIN_ROLL 1
-#define MAX_ROLL 9999
 
 int totalStudents = 0;
 
@@ -34,16 +34,6 @@ int readInteger(const char *prompt, int min, int max, int *value)
             return 0;
         }
 
-        if (strchr(input, '\n') == NULL && !feof(stdin)) {
-            int ch;
-
-            while ((ch = getchar()) != '\n' && ch != EOF) {
-            }
-
-            printf("Input is too long. Try again.\n");
-            continue;
-        }
-
         errno = 0;
         number = strtol(input, &end, 10);
 
@@ -51,8 +41,8 @@ int readInteger(const char *prompt, int min, int max, int *value)
             end++;
         }
 
-        if (end == input || *end != '\0' || errno == ERANGE
-            || number < min || number > max) {
+        if (end == input || *end != '\0' ||
+            errno == ERANGE || number < min || number > max) {
             printf("Invalid input. Enter a number between %d and %d.\n",
                    min, max);
             continue;
@@ -63,54 +53,70 @@ int readInteger(const char *prompt, int min, int max, int *value)
     }
 }
 
-int readName(char name[], int size)
+int isDuplicateRoll(const struct Student *students,
+                    int count, int roll)
 {
-    char input[256];
-    size_t length;
-    int ch;
-    int hasCharacter;
+    for (int i = 0; i < count; i++) {
+        if (students[i].roll == roll) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int readStudent(struct Student *student,
+                const struct Student *students, int count)
+{
+    char line[256];
+    char extra;
+    int roll;
+    int marks1, marks2, marks3;
+    char name[NAME_LENGTH];
 
     while (1) {
-        printf("Enter student name: ");
-
-        if (fgets(input, sizeof(input), stdin) == NULL) {
+        if (fgets(line, sizeof(line), stdin) == NULL) {
             return 0;
         }
 
-        length = strlen(input);
-
-        if (length > 0 && input[length - 1] == '\n') {
-            input[--length] = '\0';
-        } else if (!feof(stdin)) {
+        if (strchr(line, '\n') == NULL && !feof(stdin)) {
+            int ch;
             while ((ch = getchar()) != '\n' && ch != EOF) {
             }
-
-            printf("Name is too long. Maximum %d characters allowed.\n",
-                   size - 1);
+            printf("Invalid student record.\n");
             continue;
         }
 
-        hasCharacter = 0;
-
-        for (size_t i = 0; input[i] != '\0'; i++) {
-            if (!isspace((unsigned char)input[i])) {
-                hasCharacter = 1;
-                break;
-            }
-        }
-
-        if (!hasCharacter) {
-            printf("Name cannot be empty.\n");
+        if (sscanf(line, "%d %49s %d %d %d %c",
+                   &roll, name, &marks1, &marks2, &marks3,
+                   &extra) != 5) {
+            printf("Invalid student record. Try again.\n");
             continue;
         }
 
-        if (length >= (size_t)size) {
-            printf("Name is too long. Maximum %d characters allowed.\n",
-                   size - 1);
+        if (roll < MIN_ROLL || roll > MAX_ROLL) {
+            printf("Roll number must be between 1 and 100.\n");
             continue;
         }
 
-        strcpy(name, input);
+        if (isDuplicateRoll(students, count, roll)) {
+            printf("Roll number already exists. Try again.\n");
+            continue;
+        }
+
+        if (marks1 < MIN_MARKS || marks1 > MAX_MARKS ||
+            marks2 < MIN_MARKS || marks2 > MAX_MARKS ||
+            marks3 < MIN_MARKS || marks3 > MAX_MARKS) {
+            printf("Marks must be between 0 and 100.\n");
+            continue;
+        }
+
+        student->roll = roll;
+        strcpy(student->name, name);
+        student->marks[0] = marks1;
+        student->marks[1] = marks2;
+        student->marks[2] = marks3;
+
         return 1;
     }
 }
@@ -153,76 +159,13 @@ int starsForGrade(char grade)
         case 'B': return 4;
         case 'C': return 3;
         case 'D': return 2;
-        default:  return 0;
+        default: return 0;
     }
-}
-
-int isDuplicateRoll(const struct Student *students,
-                    int count, int roll)
-{
-    for (int i = 0; i < count; i++) {
-        if (students[i].roll == roll) {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-int readStudent(struct Student *student,
-                const struct Student *students, int count)
-{
-    while (1) {
-        if (!readInteger("Enter roll number (1-9999): ",
-                         MIN_ROLL, MAX_ROLL, &student->roll)) {
-            return 0;
-        }
-
-        if (isDuplicateRoll(students, count, student->roll)) {
-            printf("Roll number already exists. Enter a unique number.\n");
-            continue;
-        }
-
-        break;
-    }
-
-    if (!readName(student->name, NAME_LENGTH)) {
-        return 0;
-    }
-
-    printf("Enter marks for three subjects (0-100).\n");
-
-    for (int i = 0; i < SUBJECT_COUNT; i++) {
-        char prompt[40];
-
-        snprintf(prompt, sizeof(prompt), "Subject %d marks: ", i + 1);
-
-        if (!readInteger(prompt, MIN_MARKS, MAX_MARKS,
-                         &student->marks[i])) {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
-int inputStudents(struct Student *students, int count)
-{
-    for (int i = 0; i < count; i++) {
-        printf("\n--- Student %d ---\n", i + 1);
-
-        if (!readStudent(&students[i], students, i)) {
-            return 0;
-        }
-    }
-
-    return 1;
 }
 
 void displayStudentReport(const struct Student *student,
                           int total, float average, char grade)
 {
-    printf("\n------------------------------\n");
     printf("Roll: %d\n", student->roll);
     printf("Name: %s\n", student->name);
     printf("Total: %d\n", total);
@@ -243,10 +186,19 @@ void printPerformance(char grade)
     printf("\n");
 }
 
+int inputStudents(struct Student *students, int count)
+{
+    for (int i = 0; i < count; i++) {
+        if (!readStudent(&students[i], students, i)) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 void displayReports(const struct Student *students, int count)
 {
-    printf("\n===== STUDENT PERFORMANCE REPORT =====\n");
-
     for (int i = 0; i < count; i++) {
         const struct Student *current = students + i;
         int total = calculateTotal(current);
@@ -256,44 +208,49 @@ void displayReports(const struct Student *students, int count)
         displayStudentReport(current, total, average, grade);
 
         if (average < 35) {
+            printf("\n");
             continue;
         }
 
         printPerformance(grade);
+
+        if (i < count - 1) {
+            printf("\n");
+        }
     }
 }
 
-void printrolls(const struct Student *students,
-                int count, int index)
+void printRollNumbers(const struct Student *students,
+                      int count, int index)
 {
     if (index >= count) {
         return;
     }
 
-    printf(" %d", students[index].roll);
+    if (index > 0) {
+        printf(" ");
+    }
 
-    printrolls(students, count, index + 1);
+    printf("%d", students[index].roll);
+    printRollNumbers(students, count, index + 1);
 }
 
 int main(void)
 {
     struct Student students[MAX_STUDENTS];
 
-    if (!readInteger("Enter number of students (1-100): ",
-                     1, MAX_STUDENTS, &totalStudents)) {
-        printf("\nInput ended unexpectedly.\n");
+    if (!readInteger("", 1, MAX_STUDENTS, &totalStudents)) {
         return 1;
     }
 
     if (!inputStudents(students, totalStudents)) {
-        printf("\nUnable to read student data. Program terminated.\n");
         return 1;
     }
 
     displayReports(students, totalStudents);
 
-    printf("\nList of Roll Numbers (via recursion):");
-    printrolls(students, totalStudents, 0);
+    printf("\nList of Roll Numbers (via recursion): ");
+    printRollNumbers(students, totalStudents, 0);
     printf("\n");
 
     return 0;
