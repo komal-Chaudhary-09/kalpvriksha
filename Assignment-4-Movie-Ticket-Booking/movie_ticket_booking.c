@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -47,20 +48,20 @@ int validateTickets(const struct customer *ptr)
     return 1;
 }
 
-int selectCategory(const struct customer *ptr, struct bill *b)
+int selectCategory(const struct customer *ptr, struct bill *billDetails)
 {
     switch (ptr->ticket_category) {
         case 1:
-            b->ticket_price = STANDARD_PRICE;
-            b->category_name = "Standard";
+            billDetails->ticket_price = STANDARD_PRICE;
+            billDetails->category_name = "Standard";
             break;
         case 2:
-            b->ticket_price = PREMIUM_PRICE;
-            b->category_name = "Premium";
+            billDetails->ticket_price = PREMIUM_PRICE;
+            billDetails->category_name = "Premium";
             break;
         case 3:
-            b->ticket_price = RECLINER_PRICE;
-            b->category_name = "Recliner";
+            billDetails->ticket_price = RECLINER_PRICE;
+            billDetails->category_name = "Recliner";
             break;
         default:
             printf("Error: Invalid ticket category. Choose 1, 2, or 3.\n");
@@ -69,33 +70,33 @@ int selectCategory(const struct customer *ptr, struct bill *b)
     return 1;
 }
 
-void calculateBill(const struct customer *ptr, struct bill *b)
+void calculateBill(const struct customer *ptr, struct bill *billDetails)
 {
-    b->sub_total = b->ticket_price * ptr->no_of_tickets;
+    billDetails->sub_total = billDetails->ticket_price * ptr->no_of_tickets;
 
     if (ptr->no_of_tickets >= DISCOUNT_LIMIT) {
-        b->disc = b->sub_total * DISCOUNT_RATE;
+        billDetails->disc = billDetails->sub_total * DISCOUNT_RATE;
     } else {
-        b->disc = 0.0;
+        billDetails->disc = 0.0;
     }
 
-    b->final_bill = b->sub_total - b->disc;
+    billDetails->final_bill = billDetails->sub_total - billDetails->disc;
 }
 
-void displayBill(const struct customer *ptr, const struct bill *b)
+void displayBill(const struct customer *ptr, const struct bill *billDetails)
 {
     printf("Customer: %s\n", ptr->name);
-    printf("Ticket Category: %s\n", b->category_name);
+    printf("Ticket Category: %s\n", billDetails->category_name);
     printf("Tickets: %d\n", ptr->no_of_tickets);
-    printf("Subtotal: %.2f\n", b->sub_total);
-    printf("Discount: %.2f\n", b->disc);
-    printf("Final Bill: %.2f\n", b->final_bill);
+    printf("Subtotal: %.2f\n", billDetails->sub_total);
+    printf("Discount: %.2f\n", billDetails->disc);
+    printf("Final Bill: %.2f\n", billDetails->final_bill);
 }
 
 int main(void)
 {
     struct customer *ptr = malloc(sizeof *ptr);
-    struct bill b;
+    struct bill billDetails;
 
     if (ptr == NULL) {
         printf("Error: Memory allocation failed.\n");
@@ -107,14 +108,14 @@ int main(void)
         return 1;
     }
 
-    if (!validateTickets(ptr) || !selectCategory(ptr, &b)) {
+    if (!validateTickets(ptr) || !selectCategory(ptr, &billDetails)) {
         free(ptr);
         return 1;
     }
 
-    calculateBill(ptr, &b);
-    displayBill(ptr, &b);
+    calculateBill(ptr, &billDetails);
+    displayBill(ptr, &billDetails);
 
     free(ptr);
     return 0;
-}  
+}
